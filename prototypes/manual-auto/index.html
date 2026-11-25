@@ -4,11 +4,11 @@
 *{box-sizing:border-box}body{margin:0;background:#20231e;color:#eee8d8;font:14px system-ui,sans-serif}main{max-width:1230px;margin:auto;padding:14px}h1{font-size:21px;margin:0}small,.muted{color:#bdbdac}button{font:inherit;color:inherit;background:#41483d;border:1px solid #737969;border-radius:6px;padding:8px 12px;cursor:pointer}button:hover{background:#58614f}button:disabled{opacity:.45;cursor:default}.primary{background:#d3b879;color:#24251c;font-weight:bold}.top,.bar,.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.top{justify-content:space-between}.hud{position:sticky;top:0;z-index:5;background:#20231e;padding:8px 0}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}.stat{border:1px solid #53594b;border-radius:6px;background:#31362d;padding:6px 9px;font-size:11px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:#f0d9a4}.layout{display:grid;grid-template-columns:minmax(0,1fr) 205px;gap:9px}.stage{min-width:0}.scene{position:relative;background:#34392f;border:1px solid #69715e;border-radius:7px;overflow:hidden}canvas{display:block;width:100%;height:auto;touch-action:none;outline:none}.hint{background:#353a30;border:1px solid #51594a;padding:8px;border-radius:5px;min-height:38px;margin:7px 0}.side{background:#181c17;border:1px solid #494f43;border-radius:7px;padding:9px;min-width:0}.log{height:335px;overflow:auto;overflow-wrap:anywhere;font-size:12px;line-height:1.6}.log div{padding:5px 0;border-bottom:1px solid #333a2e}.bad{color:#e7a08b}.good{color:#b4d5a3}.controls{justify-content:space-between}.actions,.dpad{display:flex;gap:5px;flex-wrap:wrap;align-items:center}.dpad button{touch-action:none;min-width:38px}.legend{font-size:12px;color:#bdbdac;line-height:1.7}.result{margin:6px 0;padding:9px;border:1px solid #bcaa76;border-radius:5px}details{margin:7px 0;font-size:12px}summary{cursor:pointer;color:#d9c99d}#pad{font-size:11px;color:#bdbdac}@media(max-width:800px){.layout{grid-template-columns:1fr}.log{height:90px}.stats{grid-template-columns:repeat(3,1fr)}.stat b{font-size:18px}.controls{justify-content:flex-start}main{padding:7px}} 
 </style></head><body><main>
 <div class="top"><div><h1>THE JOLLY BEAN CAFÉ</h1><small>03 · 自由移动 × 安全窗口 · 无限营业测试 v0.2</small></div><div class="bar"><button class="primary" id="start">开始营业</button><button id="reset">重置</button><a href="../dual-switch/" style="color:#d5c28d">旧版分屏</a></div></div>
-<details><summary>玩法说明</summary><p>控制一台机器人自由移动，靠近工位或餐桌按 A 交互。手动研磨按一次连续制作，满4份自动停止；方向键或 S 可在当前份完成后停止批量研磨。其他交互仍为单次操作。空格 / LB 切换，另一台重复最后的工作。咖啡机启动后独立计时，5秒完成，6秒安全窗口，2.5秒警告，超时故障；及时取杯并送往中央交接台。F / Y 给非主控机器人使用一次15秒临时托管。本版本不限营业时间，顾客持续入座，可随时重置。机器自身的安全窗口和临时托管倒计时仍然有效。</p></details>
+<details><summary>玩法说明</summary><p>控制一台机器人自由移动，靠近工位或餐桌按 A 交互。磨豆机按一次 A 启动后独立运行，机器人可自由离开；后台主控或托管时满4份自动停止，普通自动时可能过量研磨。S 立即暂停当前操作与后台研磨并保留进度，再次交互继续。其他交互仍为单次操作。空格 / LB 切换，另一台重复最后的工作。咖啡机启动后独立计时，5秒完成，6秒安全窗口，2.5秒警告，超时故障；及时取杯并送往中央交接台。F / Y 给非主控机器人使用一次15秒临时托管。本版本不限营业时间，顾客持续入座，可随时重置。机器自身的安全窗口和临时托管倒计时仍然有效。</p></details>
 <div class="hud"><div class="stats"><div class="stat">已营业<b id="time">00:00</b></div><div class="stat">咖啡粉<b id="ground">0/4</b></div><div class="stat">累计出杯<b id="brewed">0</b></div><div class="stat">交接台<b id="ready">0/3</b></div><div class="stat">营业额<b id="money">0</b></div><div class="stat">失误 / 最高纪录<b id="mistakes">0 / 0</b></div></div></div>
 <div class="layout"><div class="stage"><div class="scene"><canvas id="game" width="900" height="470" tabindex="0" aria-label="咖啡馆白盒场景"></canvas></div><div class="hint" id="hint"></div>
-<div class="controls"><div class="dpad"><button data-move="up">↑</button><button data-move="left">←</button><button data-move="down">↓</button><button data-move="right">→</button></div><div class="actions"><button id="interact">A 交互</button><button id="switch">空格 切换</button><button id="stop">S 停止重复</button><button id="assist">F 临时托管</button></div></div>
-<div id="result" class="result" hidden></div><p class="legend">方向键移动 · A 交互 · 空格切换 · S 清除重复指令 · F 托管另一侧。鼠标可点工作站自动走近并交互。Enter 开始 / 暂停。手柄：左摇杆 / 十字键、A 交互、LB 切换、B 停止、Y 托管、Start 开始 / 暂停。<span id="pad"></span></p></div>
+<div class="controls"><div class="dpad"><button data-move="up">↑</button><button data-move="left">←</button><button data-move="down">↓</button><button data-move="right">→</button></div><div class="actions"><button id="interact">A 交互</button><button id="switch">空格 切换</button><button id="stop">S 停止 / 保留进度</button><button id="assist">F 临时托管</button></div></div>
+<div id="result" class="result" hidden></div><p class="legend">方向键移动 · A 交互 · 空格切换 · S 立即停止（保留进度） · F 托管另一侧。鼠标可点工作站自动走近并交互。Enter 开始 / 暂停。手柄：左摇杆 / 十字键、A 交互、LB 切换、B 停止、Y 托管、Start 开始 / 暂停。<span id="pad"></span></p></div>
 <aside class="side"><strong>实时工作日志</strong><div id="log" class="log"></div></aside></div></main>
 <script>
 "use strict";
@@ -18,8 +18,8 @@ const sites={grind:{x:95,y:156,side:"back",name:"磨豆机"},machine:{x:270,y:15
 const obstacles=[{x:40,y:65,w:110,h:60},{x:208,y:65,w:125,h:60},{x:431,y:201,w:38,h:100},{x:545,y:105,w:90,h:56},{x:742,y:105,w:90,h:56},{x:645,y:293,w:90,h:56}];
 const inside=(r,x,y)=>{const lo=r.side==="back"?22:480,hi=r.side==="back"?420:878;return x>=lo&&x<=hi&&y>=52&&y<=438&&!obstacles.some(o=>x>o.x-11&&x<o.x+o.w+11&&y>o.y-11&&y<o.y+o.h+11)};
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),near=(r,k)=>dist(r,sites[k])<=32;
-function robot(side,x,y){return {side,x,y,last:"idle",lastTable:0,grindBatch:false,job:null,route:[],goal:null,carry:null,assist:0,wait:0}}
-function newGame(best=0){return {run:false,end:false,time:0,focus:"back",ground:0,brewed:0,ready:[],money:0,paid:0,mistakes:0,best,charges:1,nextGuest:4,tables:[1,2,3].map(guest=>({guest,state:"new"})),machine:{phase:"idle",age:0,cup:null},back:robot("back",180,280),front:robot("front",675,250),logs:["等待开店。先控制后台研磨，或者切换前厅点单。"]}}
+function robot(side,x,y){return {side,x,y,last:"idle",lastTable:0,job:null,pausedJob:null,route:[],goal:null,carry:null,assist:0,wait:0}}
+function newGame(best=0){return {run:false,end:false,time:0,focus:"back",ground:0,brewed:0,ready:[],money:0,paid:0,mistakes:0,best,charges:1,nextGuest:4,tables:[1,2,3].map(guest=>({guest,state:"new"})),grinder:{active:false,progress:0},machine:{phase:"idle",age:0,cup:null},back:robot("back",180,280),front:robot("front",675,250),logs:["等待开店。先控制后台研磨，或者切换前厅点单。"]}}
 function say(s,msg,type=""){s.logs.unshift({msg,type});if(s.logs.length>30)s.logs.length=30}
 function fail(s,msg){s.mistakes++;say(s,msg,"bad")}
 function setTable(s,c,state){const t=s.tables[c?.table];if(t&&t.guest===c.guest){t.state=state;return true}return false}
@@ -47,21 +47,41 @@ function contextual(s,r,key){
  if(key==="frontpass")return "pickup";
  const i=Number(key.slice(-1)),t=s.tables[i];if(!t)return null;if(r.carry)return "deliver";return t.state==="new"?"order":t.state==="served"?"pay":t.state==="paid"?"clean":null;
 }
+function startGrinding(s,r,auto){
+ const g=s.grinder,safe=r.side===s.focus||r.assist>0;
+ if(!auto)r.last="grind";
+ if(g.active)return true;
+ if(safe&&s.ground>=4){if(!auto)say(s,"咖啡粉已满，磨豆机保持停止。");return false}
+ g.active=true;say(s,g.progress>0?"Grindy Joe：继续研磨，保留原进度。":"Grindy Joe：启动研磨，可离开工位。");return true;
+}
+function grinderTick(s,dt){
+ const g=s.grinder,safe=s.focus==="back"||s.back.assist>0;
+ if(!g.active)return;
+ if(safe&&s.ground>=4){g.active=false;say(s,"咖啡粉 4/4，磨豆机自动停止。","good");return}
+ g.progress+=dt;
+ while(g.active&&g.progress+1e-8>=WORK.grind){
+  g.progress=Math.max(0,g.progress-WORK.grind);
+  if(s.ground<4){s.ground++;say(s,"研磨完成 +1");}
+  else fail(s,"咖啡粉已满，仍在研磨！");
+  if(safe&&s.ground>=4){g.active=false;g.progress=0;say(s,"咖啡粉 4/4，磨豆机自动停止。","good")}
+ }
+}
 function begin(s,r,key,action,auto=false){
  if(r.job||!near(r,key))return false;
  let a=action||contextual(s,r,key);if(!a){if(!auto)say(s,"现在没有可执行的操作。");r.wait=.4;return false}
+ if(a==="grind")return startGrinding(s,r,auto);
  let i=key.startsWith("table")?Number(key.slice(-1)):-1,t=i>=0?targetOf(s,i):null;
- if(!auto){r.last=a==="pickup"?"deliver":a==="deposit"?"collect":a;if(i>=0)r.lastTable=i;if(a==="grind"){if(s.ground>=4){r.grindBatch=false;say(s,"咖啡粉已满，研磨已停止。");return false}r.grindBatch=true}}
- const seconds=WORK[a]??.4;
- r.job={a,key,target:t,left:seconds,total:seconds,auto};
+ if(!auto){r.last=a==="pickup"?"deliver":a==="deposit"?"collect":a;if(i>=0)r.lastTable=i}
+ const seconds=WORK[a]??.4,old=r.pausedJob;
+ if(old&&old.a===a&&old.key===key&&old.target?.guest===t?.guest){r.job={...old,auto};r.pausedJob=null;say(s,"继续"+(label[a]||a)+"，保留原进度。")}
+ else{r.pausedJob=null;r.job={a,key,target:t,left:seconds,total:seconds,auto}}
  if(seconds===0)finish(s,r);
  return true;
 }
 function finish(s,r){
  const j=r.job;r.job=null;const a=j.a,m=s.machine,t=j.target,smart=r.side!==s.focus&&r.assist>0;
  const bad=msg=>{if(smart)say(s,"托管：跳过无效操作。");else fail(s,msg)};
- if(a==="grind"){if(s.ground<4){s.ground++;say(s,"研磨完成 +1")}else if(r.side!==s.focus)bad("咖啡粉已满，仍在研磨！");else say(s,"咖啡粉已满，研磨已停止。");if(r.grindBatch&&r.side===s.focus&&s.ground<4){r.job={a:"grind",key:j.key,target:null,left:WORK.grind,total:WORK.grind,auto:false};return}if(r.grindBatch&&s.ground>=4)say(s,"咖啡粉 4/4，手动研磨自动停止。","good");r.grindBatch=false}
- else if(a==="start"){
+ if(a==="start"){
    if(m.phase!=="idle"){if(!j.auto)say(s,"咖啡机正在工作，请在安全窗口取杯。");}
    else if(s.ground<=0)bad("没有咖啡粉！");
    else if(r.carry)bad("手中还有咖啡，先放到交接台。");
@@ -99,7 +119,7 @@ function autoPlan(s,r){
   if(smart&&m.phase==="fault"){key="machine";act="repair"}
   else if(r.carry){if(smart&&s.ready.length>=3)return;key="backpass";act="deposit"}
   else if(smart&&(m.phase==="ready"||m.phase==="warn")){key="machine";act="collect"}
-  else if(a==="grind"){if(smart&&s.ground>=4)return;key="grind"}
+  else if(a==="grind"){if(s.grinder.active||smart&&s.ground>=4)return;key="grind"}
   else if(a==="start"){if(smart&&(m.phase!=="idle"||s.ground===0||available(s,"waiting")<0))return;if(m.phase!=="idle")return;key="machine"}
   else if(a==="collect"){if(smart&&m.phase!=="ready"&&m.phase!=="warn")return;if(m.phase==="brewing")return;key="machine"}
   else if(a==="repair"){if(m.phase!=="fault")return;key="machine"}
@@ -111,18 +131,17 @@ function autoPlan(s,r){
 }
 function tickRobot(s,r,dt,input){
  r.assist=Math.max(0,r.assist-dt);
- if(r.side===s.focus&&Math.hypot(input.x,input.y)>.05)r.grindBatch=false;
  if(r.job){r.job.left-=dt;if(r.job.left<=1e-8)finish(s,r);return}
  r.wait=Math.max(0,r.wait-dt);const manual=r.side===s.focus;
  if(manual&&Math.hypot(input.x,input.y)>.05){r.route=[];r.goal=null;move(r,input.x,input.y,dt);return}
  if(r.goal){follow(r,dt);if(!r.route.length){const g=r.goal;r.goal=null;begin(s,r,g.key,g.action,!manual)}return}
- if(!manual&&r.wait<=0)autoPlan(s,r);
+ if(!manual&&r.wait<=0&&(r.last!=="idle"||r.assist>0))autoPlan(s,r);
 }
 function tick(s,dt,input={x:0,y:0}){
- if(!s.run)return;s.time+=dt;machineTick(s,dt);tickRobot(s,s.back,dt,input);tickRobot(s,s.front,dt,input);s.best=Math.max(s.best,s.money);
+ if(!s.run)return;s.time+=dt;grinderTick(s,dt);machineTick(s,dt);tickRobot(s,s.back,dt,input);tickRobot(s,s.front,dt,input);s.best=Math.max(s.best,s.money);
 }
-function switchRobot(s){if(!s.run)return;const old=s[s.focus];old.grindBatch=false;old.route=[];old.goal=null;s.focus=s.focus==="back"?"front":"back";const r=s[s.focus];r.grindBatch=false;r.route=[];r.goal=null;say(s,"接管"+(s.focus==="back"?"后台":"前厅")+"。")}
-function stopRepeat(s){const r=s[s.focus];r.grindBatch=false;r.last="idle";r.goal=null;r.route=[];say(s,"已清除当前机器人的重复指令。正在执行的单次动作仍会完成。")}
+function switchRobot(s){if(!s.run)return;const old=s[s.focus];old.route=[];old.goal=null;s.focus=s.focus==="back"?"front":"back";const r=s[s.focus];r.route=[];r.goal=null;say(s,"接管"+(s.focus==="back"?"后台":"前厅")+"。")}
+function stopRepeat(s){if(!s.run)return;const r=s[s.focus];r.last="idle";r.goal=null;r.route=[];if(r.job){r.pausedJob=r.job;r.job=null;}if(r.side==="back")s.grinder.active=false;say(s,"立即停止，保留任务与研磨进度；再次交互可继续。")}
 function assist(s){if(!s.run||s.charges<=0)return;const r=s[s.focus==="back"?"front":"back"];s.charges--;r.assist=ASSIST;say(s,"智能真空管：另一侧托管15秒。","good")}
 function nearest(r){return Object.keys(sites).filter(k=>sites[k].side===r.side&&near(r,k)).sort((a,b)=>dist(r,sites[a])-dist(r,sites[b]))[0]}
 function interact(s){if(!s.run)return;const r=s[s.focus],k=nearest(r);if(k&&!r.job){r.route=[];r.goal=null;begin(s,r,k,null,false)}else if(!r.job)say(s,"请靠近机器、交接台或餐桌。")}
@@ -152,7 +171,7 @@ function draw(){
  ctx.strokeStyle="#ffffff13";ctx.lineWidth=1;for(let x=10;x<890;x+=25){ctx.beginPath();ctx.moveTo(x,35);ctx.lineTo(x,450);ctx.stroke()}for(let y=35;y<450;y+=25){ctx.beginPath();ctx.moveTo(10,y);ctx.lineTo(890,y);ctx.stroke()}
  rect(435,35,30,166,"#454a3c");rect(435,301,30,149,"#454a3c");
  txt("后台 "+(s.focus==="back"?"· 主控":"· 自动"),220,23,s.focus==="back"?"#f4d88e":"#c5c6b4",15);txt("前厅 "+(s.focus==="front"?"· 主控":"· 自动"),680,23,s.focus==="front"?"#f4d88e":"#c5c6b4",15);
- rect(40,65,110,60,"#c3ad7f","#514c37");txt("Grindy Joe",95,88,"#342f23",12);txt("磨豆机",95,109,"#342f23",14);
+ const g=s.grinder,gc=g.active?(s.ground>=4?"#c66b53":"#91b37e"):g.progress>0?"#d4ae6c":"#c3ad7f";rect(40,65,110,60,gc,"#514c37");txt("Grindy Joe",95,88,"#342f23",12);txt(g.active?(s.ground>=4?"过量研磨！":"研磨 "+(WORK.grind-g.progress).toFixed(1)+"s"):g.progress>0?"暂停 · A继续":s.ground>=4?"库存已满":"磨豆机 · A启动",95,109,"#342f23",12);bar(40,130,110,7,g.progress/WORK.grind,gc);
  const m=s.machine,mc={idle:"#b9a178",brewing:"#849eb0",ready:"#91b37e",warn:"#dfa84f",fault:"#c66b53"}[m.phase];
  rect(208,65,125,60,mc,"#514c37");txt("MISS STEAM",270,86,"#342f23",12);const countdown=m.phase==="brewing"?Math.max(0,BREW-m.age):m.phase==="ready"?Math.max(0,BREW+SAFE-m.age):m.phase==="warn"?Math.max(0,BREW+SAFE+WARN-m.age):null;txt(countdown===null?phases[m.phase]:(m.phase==="brewing"?"萃取 ":m.phase==="ready"?"取杯剩余 ":"高压警告 ")+countdown.toFixed(1)+"s",270,106,"#342f23",13);
  bar(208,130,125,7,m.phase==="brewing"?m.age/BREW:m.phase==="ready"?(BREW+SAFE-m.age)/SAFE:m.phase==="warn"?(BREW+SAFE+WARN-m.age)/WARN:m.phase==="fault"?1:0,mc);
@@ -165,10 +184,10 @@ function draw(){
   const active=s.focus===r.side;circle(r.x,r.y+8,16,active?"#f8d17b":"#444d3c");rect(r.x-10,r.y-12,20,26,r.side==="back"?"#8eafa1":"#cf9274","#e7d6ae");rect(r.x-15,r.y-24,30,20,r.assist>0?"#dcb45f":"#bcac82","#e8d9b8");rect(r.x-10,r.y-20,20,10,"#363c33");circle(r.x-5,r.y-15,2,"#efdab0");circle(r.x+5,r.y-15,2,"#efdab0");
   if(r.carry){rect(r.x+13,r.y-4,10,10,"#f6e6be");rect(r.x+15,r.y-4,6,3,"#80503b")}
   if(r.assist>0){rect(r.x-4,r.y-34,8,9,"#ffda78");txt("托管 "+r.assist.toFixed(0)+"s",r.x,r.y-40,"#ffdc8a",12)}else txt(active?"▼ 主控":"↻ "+(label[r.last]||r.last),r.x,r.y-31,active?"#fff3ba":"#f3e7c9",12);
-  if(r.job){bar(r.x-24,r.y+21,48,5,1-r.job.left/r.job.total,"#e9cd89")}
+  if(r.job){bar(r.x-24,r.y+21,48,5,1-r.job.left/r.job.total,"#e9cd89")}else if(r.pausedJob){const p=sites[r.pausedJob.key];bar(p.x-24,p.y+10,48,5,1-r.pausedJob.left/r.pausedJob.total,"#d4ae6c");}
  }
  const r=s[s.focus],k=nearest(r);if(k){const p=sites[k];ctx.strokeStyle="#ffe29d";ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,22,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1}
- $("hint").textContent=(s.focus==="back"?"后台":"前厅")+"主控 · "+(r.job?"正在"+(label[r.job.a]||r.job.a)+(r.grindBatch?"（连续至满）":"")+" "+Math.max(0,r.job.left).toFixed(1)+"s":k?"A "+(label[contextual(s,r,k)]|| (contextual(s,r,k)==="pickup"?"取餐":"等待"))+"（"+sites[k].name+"）":"移动到交互点")+" | 自动侧："+(label[s[s.focus==="back"?"front":"back"].last]||"待机");
+ $("hint").textContent=(s.focus==="back"?"后台":"前厅")+"主控 · "+(r.job?"正在"+(label[r.job.a]||r.job.a)+" "+Math.max(0,r.job.left).toFixed(1)+"s":k==="grind"?(g.active?"磨豆机运行中 · S 暂停":g.progress>0?"A 继续研磨":s.ground>=4?"咖啡粉已满":"A 启动研磨"):k?"A "+(label[contextual(s,r,k)]|| (contextual(s,r,k)==="pickup"?"取餐":"等待"))+"（"+sites[k].name+"）":"移动到交互点")+" | 自动侧："+(label[s[s.focus==="back"?"front":"back"].last]||"待机");
  const seconds=Math.floor(s.time+1e-6);$("time").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");$("ground").textContent=s.ground+"/4";$("brewed").textContent=s.brewed;$("ready").textContent=s.ready.length+"/3";$("money").textContent=s.money;$("mistakes").textContent=s.mistakes+" / "+s.best;
  $("start").disabled=false;$("start").textContent=s.run?"暂停营业":s.time>0?"继续营业":"开始营业";$("assist").disabled=!s.run||!s.charges;$("assist").textContent="F 托管 ×"+s.charges;
  if(logRef!==s.logs[0]){logRef=s.logs[0];$("log").replaceChildren(...s.logs.map(v=>{const d=document.createElement("div");d.textContent=typeof v==="string"?v:v.msg;d.className=v.type||"";return d}))}
