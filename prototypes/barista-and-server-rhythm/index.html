@@ -5,8 +5,8 @@
 main{max-width:1050px}.layout{display:block}.scene{background:#1b201b}.side{margin-top:8px}.log{height:110px}.pip-hit{position:absolute;left:73%;top:3%;width:25%;height:38%;border:0;background:transparent;padding:0;border-radius:8px;cursor:pointer}.pip-hit:hover{background:#ffffff0c;box-shadow:0 0 0 2px #e9d19a}.pip-hit:focus-visible{outline:2px solid #f0cf82}.legend{margin:6px 0}.hud{position:static}.controls{margin-top:4px}.hint{min-height:32px;margin:5px 0} @media(max-width:650px){.scene{overflow:hidden}.pip-hit{min-height:44px}}
 
 </style></head><body><main>
-<div class="top"><div><h1>THE JOLLY BEAN CAFÉ</h1><small>08 · 咖啡师 / 服务员 · 固定双机位白盒 v0.2 · 低频切换</small></div><div class="bar"><button class="primary" id="start">开始营业</button><button id="reset">重置</button><span class="muted">DUAL MODE · 节奏测试</span></div></div>
-<details><summary>玩法说明</summary><p>咖啡师模式：正面工作台特写，点击磨豆机、咖啡机、交接台即可直接操作（无需走动）；方向键选择工位，A 执行。服务员模式：低角度咖啡馆全景，方向键移动，A 交互，也可点击餐桌自动走近。空格或点击小窗切换模式，另一侧自主安排常规工作，无需反复切换。S 立即停止并保留进度，F 使另一侧机器人工作提速15秒（一次）。咖啡萃取6秒、安全取杯12秒、警告5秒；客人饮用后结账、清洁后间隔入座；无限营业。当前仍为基础产品白盒。</p></details>
+<div class="top"><div><h1>THE JOLLY BEAN CAFÉ</h1><small>08 · 咖啡师 / 服务员 · 固定双机位白盒 v0.2.1 · 连续任务</small></div><div class="bar"><button class="primary" id="start">开始营业</button><button id="reset">重置</button><span class="muted">DUAL MODE · 节奏测试</span></div></div>
+<details><summary>玩法说明</summary><p>咖啡师模式：正面工作台特写，点击磨豆机、咖啡机、交接台即可直接操作（无需走动）；方向键选择工位，A 执行。服务员模式：低角度咖啡馆全景，方向键移动，A 交互，也可点击餐桌自动走近。空格或点击小窗切换模式，切换只改变控制权，当前任务继续。主动移动或改做其他任务时暂停原任务，保留进度；返回同一任务继续。S 立即停止并保留进度，F 使另一侧机器人工作提速15秒（一次）。咖啡萃取6秒、安全取杯12秒、警告5秒；客人饮用后结账、清洁后间隔入座；无限营业。当前仍为基础产品白盒。</p></details>
 <div class="hud"><div class="stats"><div class="stat">已营业<b id="time">00:00</b></div><div class="stat">咖啡粉<b id="ground">0/4</b></div><div class="stat">累计出杯<b id="brewed">0</b></div><div class="stat">交接台<b id="ready">0/3</b></div><div class="stat">营业额<b id="money">0</b></div><div class="stat">失误 / 最高纪录<b id="mistakes">0 / 0</b></div></div></div>
 <div class="layout"><div class="stage"><div class="scene"><canvas id="game" width="1000" height="560" tabindex="0" aria-label="咖啡馆当前主控区域"></canvas><button class="pip-hit" id="pipSwitch" aria-label="点击小窗，切换到另一侧" title="点击小窗切换主控"></button></div><div class="hint" id="hint"></div>
 <div class="controls"><div class="dpad"><button data-move="up">↑</button><button data-move="left">←</button><button data-move="down">↓</button><button data-move="right">→</button></div><div class="actions"><button id="interact">A 交互</button><button id="switch">空格 切换</button><button id="stop">S 停止 / 保留进度</button><button id="assist">F 临时提速</button></div></div>
@@ -21,7 +21,7 @@ const sites={grind:{x:95,y:156,side:"back",name:"磨豆机"},machine:{x:270,y:15
 const obstacles=[{x:40,y:65,w:110,h:60},{x:208,y:65,w:125,h:60},{x:431,y:201,w:38,h:100},{x:545,y:105,w:90,h:56},{x:742,y:105,w:90,h:56},{x:645,y:293,w:90,h:56}];
 const inside=(r,x,y)=>{const lo=r.side==="back"?22:480,hi=r.side==="back"?420:878;return x>=lo&&x<=hi&&y>=52&&y<=438&&!obstacles.some(o=>x>o.x-11&&x<o.x+o.w+11&&y>o.y-11&&y<o.y+o.h+11)};
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),near=(r,k)=>dist(r,sites[k])<=32;
-function robot(side,x,y){return {side,x,y,last:"idle",lastTable:0,job:null,pausedJob:null,route:[],goal:null,carry:null,assist:0,wait:0}}
+function robot(side,x,y){return {side,x,y,last:"idle",lastTable:0,job:null,pausedJobs:[],route:[],goal:null,carry:null,assist:0,wait:0}}
 function newGame(best=0){return {run:false,end:false,time:0,focus:"back",ground:0,brewed:0,ready:[],money:0,paid:0,mistakes:0,best,charges:1,nextGuest:4,tables:[1,2,3].map(guest=>({guest,state:"new"})),grinder:{active:false,progress:0},machine:{phase:"idle",age:0,cup:null},back:robot("back",180,280),front:robot("front",675,250),logs:["等待开店。非主控机器人自动执行常规任务。"]}}
 function say(s,msg,type=""){s.logs.unshift({msg,type});if(s.logs.length>30)s.logs.length=30}
 function fail(s,msg){s.mistakes++;say(s,msg,"bad")}
@@ -69,15 +69,22 @@ function grinderTick(s,dt){
   if(safe&&s.ground>=4){g.active=false;g.progress=0;say(s,"咖啡粉 4/4，磨豆机自动停止。","good")}
  }
 }
+function pauseJob(s,r){
+ if(!r.job)return;
+ const j=r.job;r.pausedJobs=r.pausedJobs.filter(p=>!(p.key===j.key&&p.a===j.a&&p.target?.guest===j.target?.guest));r.pausedJobs.push(j);r.job=null;
+ say(s,"暂停"+(label[j.a]||j.a)+" · 保留 "+Math.round(100*(1-j.left/j.total))+"% 进度。");
+}
 function begin(s,r,key,action,auto=false){
  if(r.job||!near(r,key))return false;
  let a=action||contextual(s,r,key);if(!a){if(!auto)say(s,"现在没有可执行的操作。");r.wait=.4;return false}
  if(a==="grind")return startGrinding(s,r,auto);
  let i=key.startsWith("table")?Number(key.slice(-1)):-1,t=i>=0?targetOf(s,i):null;
  if(!auto){r.last=a==="pickup"?"deliver":a==="deposit"?"collect":a;if(i>=0)r.lastTable=i}
- const seconds=WORK[a]??.4,old=r.pausedJob;
- if(old&&old.a===a&&old.key===key&&old.target?.guest===t?.guest){r.job={...old,auto};r.pausedJob=null;say(s,"继续"+(label[a]||a)+"，保留原进度。")}
- else{r.pausedJob=null;r.job={a,key,target:t,left:seconds,total:seconds,auto}}
+ const seconds=WORK[a]??.4;
+ r.pausedJobs=r.pausedJobs.filter(p=>!p.target||s.tables[p.target.table]?.guest===p.target.guest);
+ const idx=r.pausedJobs.findIndex(p=>p.a===a&&p.key===key&&p.target?.guest===t?.guest);
+ if(idx>=0){const old=r.pausedJobs.splice(idx,1)[0];r.job={...old,auto};say(s,"继续"+(label[a]||a)+"，保留原进度。")}
+ else r.job={a,key,target:t,left:seconds,total:seconds,auto};
  if(seconds===0)finish(s,r);
  return true;
 }
@@ -133,17 +140,18 @@ function autoPlan(s,r){
 }
 function tickRobot(s,r,dt,input){
  const boost=r.side!==s.focus&&r.assist>0;r.assist=Math.max(0,r.assist-dt);if(boost)dt*=1.35;
+ const manual=r.side===s.focus;
+ if(manual&&Math.hypot(input.x,input.y)>.05){pauseJob(s,r);r.route=[];r.goal=null;move(r,input.x,input.y,dt);return}
  if(r.job){r.job.left-=dt;if(r.job.left<=1e-8)finish(s,r);return}
- r.wait=Math.max(0,r.wait-dt);const manual=r.side===s.focus;
- if(manual&&Math.hypot(input.x,input.y)>.05){r.route=[];r.goal=null;move(r,input.x,input.y,dt);return}
+ r.wait=Math.max(0,r.wait-dt);
  if(r.goal){follow(r,dt);if(!r.route.length){const g=r.goal;r.goal=null;begin(s,r,g.key,g.action,!manual)}return}
  if(!manual&&r.wait<=0)autoPlan(s,r);
 }
 function tick(s,dt,input={x:0,y:0}){
  if(!s.run)return;s.time+=dt;for(const t of s.tables){if(t.state==="empty"&&s.time>=t.until){t.guest=s.nextGuest++;t.state="new";t.until=0;say(s,"新客入座。")}}grinderTick(s,dt);machineTick(s,dt);tickRobot(s,s.back,dt,input);tickRobot(s,s.front,dt,input);s.best=Math.max(s.best,s.money);
 }
-function switchRobot(s){if(!s.run)return;const old=s[s.focus];old.route=[];old.goal=null;s.focus=s.focus==="back"?"front":"back";const r=s[s.focus];r.route=[];r.goal=null;say(s,"接管"+(s.focus==="back"?"后台":"前厅")+"。")}
-function stopRepeat(s){if(!s.run)return;const r=s[s.focus];r.last="idle";r.goal=null;r.route=[];if(r.job){r.pausedJob=r.job;r.job=null;}if(r.side==="back")s.grinder.active=false;say(s,"立即停止，保留任务与研磨进度；再次交互可继续。")}
+function switchRobot(s){if(!s.run)return;s.focus=s.focus==="back"?"front":"back";s.inputGuard=true;say(s,"接管"+(s.focus==="back"?"后台":"前厅")+"；当前任务继续。")}
+function stopRepeat(s){if(!s.run)return;const r=s[s.focus];r.last="idle";r.goal=null;r.route=[];pauseJob(s,r);if(r.side==="back")s.grinder.active=false;say(s,"立即停止，保留任务与研磨进度；再次交互可继续。")}
 function assist(s){if(!s.run||s.charges<=0)return;const r=s[s.focus==="back"?"front":"back"];s.charges--;r.assist=ASSIST;say(s,"智能真空管：另一侧机器人提速15秒。","good")}
 function nearest(r){return Object.keys(sites).filter(k=>sites[k].side===r.side&&near(r,k)).sort((a,b)=>dist(r,sites[a])-dist(r,sites[b]))[0]}
 function interact(s){if(!s.run)return;const r=s[s.focus],k=nearest(r);if(k&&!r.job){r.route=[];r.goal=null;begin(s,r,k,null,false)}else if(!r.job)say(s,"请靠近机器、交接台或餐桌。")}
@@ -152,14 +160,14 @@ const keys=new Set(),touch=new Set();let previous=[],lastFrame=0,acc=0,logRef=nu
 const backKeys=["grind","machine","backpass"];
 function start(){if(s.run){s.run=false;keys.clear();touch.clear();say(s,"营业暂停。");return}const resume=s.time>0;s.run=true;acc=0;say(s,resume?"继续营业！":"开始营业！");cv.focus()}
 function reset(){s=newGame(s.best);selected=0;acc=0;keys.clear();touch.clear();draw()}
-function operate(key){if(!s.run||!sites[key]||sites[key].side!==s.focus)return;const r=s[s.focus];if(r.job){if(r.job.key===key)return;r.pausedJob=r.job;r.job=null}r.route=[];r.goal=null;if(s.focus==="back"){selected=backKeys.indexOf(key);r.x=sites[key].x;r.y=sites[key].y;begin(s,r,key,null,false)}else navigate(r,key,null);}
+function operate(key){if(!s.run||!sites[key]||sites[key].side!==s.focus)return;const r=s[s.focus];if(r.job){if(r.job.key===key)return;pauseJob(s,r)}r.route=[];r.goal=null;if(s.focus==="back"){selected=backKeys.indexOf(key);r.x=sites[key].x;r.y=sites[key].y;begin(s,r,key,null,false)}else navigate(r,key,null);}
 function action(){if(s.focus==="back")operate(backKeys[selected]);else interact(s)}
 function keyAction(k){if(k===" ")switchRobot(s);else if(k==="a")action();else if(k==="s")stopRepeat(s);else if(k==="f")assist(s);else if(k==="enter")start()}
 document.addEventListener("keydown",e=>{const k=e.key.toLowerCase();if(["arrowup","arrowdown","arrowleft","arrowright"," ","a","s","f","enter"].includes(k)){e.preventDefault();keys.add(k);if(!e.repeat)keyAction(k)}});document.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));window.addEventListener("blur",()=>{keys.clear();touch.clear()});
 $("start").onclick=start;$("reset").onclick=reset;$("interact").onclick=action;$("switch").onclick=()=>switchRobot(s);$("stop").onclick=()=>stopRepeat(s);$("assist").onclick=()=>assist(s);$("pipSwitch").onclick=()=>{switchRobot(s);cv.focus()};
 document.querySelectorAll("[data-move]").forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);touch.add(b.dataset.move)};b.onpointerup=b.onpointercancel=b.onlostpointercapture=()=>touch.delete(b.dataset.move)});
 cv.addEventListener("pointerdown",e=>{if(!s.run)return;const b=cv.getBoundingClientRect(),x=(e.clientX-b.left)*cv.width/b.width,y=(e.clientY-b.top)*cv.height/b.height;const hit=clickTargets.find(p=>x>=p.x&&x<=p.x+p.w&&y>=p.y&&y<=p.y+p.h);if(hit)operate(hit.key);cv.focus()});
-function inputs(){let x=(keys.has("arrowright")||touch.has("right")?1:0)-(keys.has("arrowleft")||touch.has("left")?1:0),y=(keys.has("arrowdown")||touch.has("down")?1:0)-(keys.has("arrowup")||touch.has("up")?1:0);let p=null;try{p=Array.from(navigator.getGamepads?.()||[]).find(Boolean)}catch{}$("pad").textContent=p?" · 手柄已连接":"";if(p){const b=p.buttons.map(b=>b.pressed),edge=i=>b[i]&&!previous[i];if(edge(0))action();if(edge(1))stopRepeat(s);if(edge(3))assist(s);if(edge(4))switchRobot(s);if(edge(9))start();previous=b;const ax=p.axes[0]||0,ay=p.axes[1]||0;if(Math.abs(ax)>.2)x=ax;if(Math.abs(ay)>.2)y=ay;if(b[14])x=-1;if(b[15])x=1;if(b[12])y=-1;if(b[13])y=1}else previous=[];if(s.focus==="back"){const d=Math.abs(x)>.2?Math.sign(x):Math.abs(y)>.2?Math.sign(y):0;if(d&&!axisHeld)selected=(selected+d+3)%3;axisHeld=!!d;return {x:0,y:0}}axisHeld=false;return {x,y};}
+function inputs(){let x=(keys.has("arrowright")||touch.has("right")?1:0)-(keys.has("arrowleft")||touch.has("left")?1:0),y=(keys.has("arrowdown")||touch.has("down")?1:0)-(keys.has("arrowup")||touch.has("up")?1:0);let p=null;try{p=Array.from(navigator.getGamepads?.()||[]).find(Boolean)}catch{}$("pad").textContent=p?" · 手柄已连接":"";if(p){const b=p.buttons.map(b=>b.pressed),edge=i=>b[i]&&!previous[i];if(edge(0))action();if(edge(1))stopRepeat(s);if(edge(3))assist(s);if(edge(4))switchRobot(s);if(edge(9))start();previous=b;const ax=p.axes[0]||0,ay=p.axes[1]||0;if(Math.abs(ax)>.2)x=ax;if(Math.abs(ay)>.2)y=ay;if(b[14])x=-1;if(b[15])x=1;if(b[12])y=-1;if(b[13])y=1}else previous=[];if(s.inputGuard){if(Math.hypot(x,y)>.05)return {x:0,y:0};s.inputGuard=false;axisHeld=false}if(s.focus==="back"){const d=Math.abs(x)>.2?Math.sign(x):Math.abs(y)>.2?Math.sign(y):0;if(d&&!axisHeld)selected=(selected+d+3)%3;axisHeld=!!d;return {x:0,y:0}}axisHeld=false;return {x,y};}
 function rect(x,y,w,h,c,stroke){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);if(stroke){ctx.strokeStyle=stroke;ctx.strokeRect(x,y,w,h)}}
 function txt(t,x,y,c="#eee7d3",size=13,align="center"){ctx.fillStyle=c;ctx.font=size+"px system-ui,sans-serif";ctx.textAlign=align;ctx.fillText(t,x,y)}
 function circle(x,y,r,c){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=c;ctx.fill()}
@@ -187,6 +195,8 @@ function ellipse(x,y,rx,ry,c,stroke){screen.beginPath();screen.ellipse(x,y,rx,ry
 function poly(points,c,stroke){screen.beginPath();points.forEach((p,i)=>i?screen.lineTo(...p):screen.moveTo(...p));screen.closePath();screen.fillStyle=c;screen.fill();if(stroke){screen.strokeStyle=stroke;screen.lineWidth=2;screen.stroke()}}
 function rr(x,y,w,h,r,c,stroke){screen.beginPath();screen.roundRect(x,y,w,h,r);screen.fillStyle=c;screen.fill();if(stroke){screen.strokeStyle=stroke;screen.lineWidth=2.5;screen.stroke()}}
 function camText(t,x,y,size=14,color="#eee5cc",align="left"){screen.font=`${size}px system-ui,sans-serif`;screen.textAlign=align;screen.fillStyle=color;screen.fillText(t,x,y)}
+function taskProgress(r,key){return r.job?.key===key?r.job:r.pausedJobs.find(p=>p.key===key&&(!p.target||s.tables[p.target.table]?.guest===p.target.guest))}
+function taskBar(r,key,x,y,w){const j=taskProgress(r,key);if(j&&j.total>0){const p=1-j.left/j.total;progress(x,y,w,p,j===r.job?"#f4d798":"#b9a784");camText((j===r.job?"":"暂停 ")+Math.round(p*100)+"%",x+w/2,y-3,11,"#fff0ce","center")}}
 function progress(x,y,w,p,c){paintRect(x,y,w,7,"#453c31");paintRect(x,y,w*Math.max(0,Math.min(1,p)),7,c)}
 function tag(x,y,w,t,color="#f2dbad"){rr(x,y,w,28,5,"#302b24e8");camText(t,x+w/2,y+19,13,color,"center")}
 function cup(x,y,scale=1){screen.save();screen.translate(x,y);screen.scale(scale,scale);screen.strokeStyle="#6b5038";screen.lineWidth=4;screen.beginPath();screen.arc(20,-12,10,-1.6,1.6);screen.stroke();poly([[-23,-26],[23,-26],[17,0],[-17,0]],"#f4e6c5","#70543d");ellipse(0,-26,23,6,"#8d5a3b","#70543d");screen.restore()}
@@ -204,7 +214,7 @@ function workbench(small){background("back");const r=s.back,g=s.grinder,m=s.mach
  rr(620,288,145,56,5,"#8b7354","#614e37");for(let i=0;i<s.ready.length;i++)cup(645+i*42,322,.7);camText("交接台",692,278,17,"#584432","center");
  tag(69,393,182,g.active?(s.ground>=4?"过量研磨！":"研磨中 · "+s.ground+"/4"):g.progress>0?"暂停 · 点击继续":"咖啡粉 "+s.ground+"/4",s.ground>=4&&g.active?"#f6a28b":"#f2dbad");progress(70,425,181,g.progress/WORK.grind,"#e4bf75");
  const rem=m.phase==="brewing"?BREW-m.age:m.phase==="ready"?BREW+SAFE-m.age:m.phase==="warn"?BREW+SAFE+WARN-m.age:0;
- tag(300,393,258,["brewing","ready","warn"].includes(m.phase)?({brewing:"萃取",ready:"取杯剩余",warn:"过热"}[m.phase])+" "+Math.max(0,rem).toFixed(1)+"s":m.phase==="fault"?"故障 · 点击维修":"待机 · 点击制作",["warn","fault"].includes(m.phase)?"#f6a28b":"#f2dbad");progress(301,425,256,m.phase==="brewing"?m.age/BREW:m.phase==="ready"?rem/SAFE:m.phase==="warn"?rem/WARN:0,"#e4bf75");tag(611,393,165,"交接台 "+s.ready.length+"/3");if(r.carry)cup(875,469,1.8);camText(r.carry?"手中咖啡":"正面工作台 · 无需走动",50,492,16,"#f3e0b7");}
+ tag(300,393,258,["brewing","ready","warn"].includes(m.phase)?({brewing:"萃取",ready:"取杯剩余",warn:"过热"}[m.phase])+" "+Math.max(0,rem).toFixed(1)+"s":m.phase==="fault"?"故障 · 点击维修":"待机 · 点击制作",["warn","fault"].includes(m.phase)?"#f6a28b":"#f2dbad");progress(301,425,256,m.phase==="brewing"?m.age/BREW:m.phase==="ready"?rem/SAFE:m.phase==="warn"?rem/WARN:0,"#e4bf75");tag(611,393,165,"交接台 "+s.ready.length+"/3");if(r.carry)cup(875,469,1.8);camText(r.carry?"手中咖啡":"正面工作台 · 无需走动",50,492,16,"#f3e0b7");for(const q of stations)taskBar(r,q.key,q.x+20,452,q.w-40); }
 function frontPoint(x,y){return {x:100+(x-465)*1.86+(y-220)*.19,y:282+(y-100)*.61}}
 function cafe(small){background("front");const r=s.front;
  // Frontal stage with a shallow diagonal counter and full-height guest silhouettes.
@@ -214,7 +224,7 @@ function cafe(small){background("front");const r=s.front;
  const pp=frontPoint(489,258);rr(pp.x-45,pp.y-65,82,66,5,"#ac8a62","#76583d");camText("取餐台",pp.x-4,pp.y-47,13,"#4e392a","center");for(let i=0;i<s.ready.length;i++)cup(pp.x-24+i*23,pp.y-23,.42);
  const items=[];const tables=[[590,133],[787,133],[690,321]];const ts=tables.map(([x,y],i)=>({i,...frontPoint(x,y)}));
  if(!small)clickTargets=[{key:"frontpass",x:pp.x-54,y:pp.y-75,w:100,h:90},...ts.map(t=>({key:"table"+t.i,x:t.x-70,y:t.y-58,w:140,h:106}))];
- for(const t of ts){items.push({y:t.y,draw:()=>{const {x,y,i}=t;ellipse(x,y+22,64,15,"#80684b44");for(const side of [-1,1]){rr(x+side*55-14,y-17,28,49,10,"#ad7155","#79543e");}rr(x-6,y,12,36,3,"#7c5a3d");ellipse(x,y-4,60,26,"#ead8b3","#8f6d4d");if(!["empty","paid"].includes(s.tables[i].state)){ellipse(x+17,y-53,15,18,"#e4c69a","#8f6d4d");rr(x+5,y-40,26,20,4,"#738677");}if(["served","paid"].includes(s.tables[i].state))cup(x+12,y-5,.55);tag(x-65,y+37,130,(i+1)+"号桌 · "+(s.tables[i].state==="served"&&s.time<(s.tables[i].until||0)?"饮用中":tableLabels[s.tables[i].state]));}})}
+ for(const t of ts){items.push({y:t.y,draw:()=>{const {x,y,i}=t;ellipse(x,y+22,64,15,"#80684b44");for(const side of [-1,1]){rr(x+side*55-14,y-17,28,49,10,"#ad7155","#79543e");}rr(x-6,y,12,36,3,"#7c5a3d");ellipse(x,y-4,60,26,"#ead8b3","#8f6d4d");if(!["empty","paid"].includes(s.tables[i].state)){ellipse(x+17,y-53,15,18,"#e4c69a","#8f6d4d");rr(x+5,y-40,26,20,4,"#738677");}if(["served","paid"].includes(s.tables[i].state))cup(x+12,y-5,.55);tag(x-65,y+37,130,(i+1)+"号桌 · "+(s.tables[i].state==="served"&&s.time<(s.tables[i].until||0)?"饮用中":tableLabels[s.tables[i].state]));taskBar(r,"table"+i,x-42,y+77,84);}})}
  const rp=frontPoint(r.x,r.y);items.push({y:rp.y,draw:()=>{ellipse(rp.x,rp.y+10,26,8,s.focus==="front"?"#f1d185":"#6e604b88");if(paperRobotImage.complete&&paperRobotImage.naturalWidth)screen.drawImage(paperRobotImage,rp.x-29,rp.y-83,58,94);if(r.carry)cup(rp.x+35,rp.y-27,.6);if(!small){camText(s.focus==="front"?"▼ 主控":r.assist>0?"提速托管":"自动 · "+(label[r.last]||r.last),rp.x,rp.y-88,13,"#f9e6b7","center");if(r.job)progress(rp.x-30,rp.y+20,60,1-r.job.left/r.job.total,"#f4d798")}}});items.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());}
 function renderSet(side,box,small=false){screen.save();screen.beginPath();screen.rect(box.x,box.y,box.w,box.h);screen.clip();screen.translate(box.x,box.y);screen.scale(box.w/1000,box.h/560);if(side==="back")workbench(small);else cafe(small);screen.restore()}
 function composeCameras(){const other=s.focus==="back"?"front":"back",status=cameraStatus(other),color=status.level==="danger"?"#ee987e":status.level==="ready"?"#e9c17b":"#9bc5a8";renderSet(s.focus,{x:0,y:0,w:1000,h:560});paintRect(0,0,1000,35,"#26251eec");camText(s.focus==="back"?"A  /  咖啡师模式 · 正面工作台":"B  /  服务员模式 · 低角度全景",18,23,16,"#f0d6a0");paintRect(730,17,258,214,"#1c201a");screen.strokeStyle=color;screen.lineWidth=status.level==="danger"?3:1.5;screen.strokeRect(730,17,258,214);renderSet(other,{x:738,y:44,w:242,h:155},true);camText("● LIVE / "+(other==="back"?"咖啡师":"服务员"),739,35,13,color);camText("点击切换",979,35,11,"#d5c9ae","right");camText(status.text,740,220,12,color);paintRect(12,520,440,28,"#25241de5");camText(s.focus==="back"?"点击机器直接操作 · ← → 选择工位 · A 交互":"方向键移动 · 点击餐桌 / A 交互",22,539,13,"#eee2c4");}
