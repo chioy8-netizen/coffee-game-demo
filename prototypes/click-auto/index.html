@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jolly Bean Café · 点击指令与安全窗口白盒</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#20231e;color:#eee8d8;font:14px system-ui,sans-serif}main{max-width:1230px;margin:auto;padding:14px}h1{font-size:21px;margin:0}small,.muted{color:#bdbdac}button{font:inherit;color:inherit;background:#41483d;border:1px solid #737969;border-radius:6px;padding:8px 12px;cursor:pointer}button:hover{background:#58614f}button:disabled{opacity:.45;cursor:default}.primary{background:#d3b879;color:#24251c;font-weight:bold}.top,.bar,.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.top{justify-content:space-between}.hud{position:sticky;top:0;z-index:5;background:#20231e;padding:8px 0}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}.stat{border:1px solid #53594b;border-radius:6px;background:#31362d;padding:6px 9px;font-size:11px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:#f0d9a4}.layout{display:grid;grid-template-columns:minmax(0,1fr) 205px;gap:9px}.stage{min-width:0}.scene{position:relative;background:#34392f;border:1px solid #69715e;border-radius:7px;overflow:hidden}canvas{cursor:pointer;display:block;width:100%;height:auto;touch-action:none;outline:none}.hint{background:#353a30;border:1px solid #51594a;padding:8px;border-radius:5px;min-height:38px;margin:7px 0}.side{background:#181c17;border:1px solid #494f43;border-radius:7px;padding:9px;min-width:0}.log{height:335px;overflow:auto;overflow-wrap:anywhere;font-size:12px;line-height:1.6}.log div{padding:5px 0;border-bottom:1px solid #333a2e}.bad{color:#e7a08b}.good{color:#b4d5a3}.controls{justify-content:space-between}.actions,.dpad{display:flex;gap:5px;flex-wrap:wrap;align-items:center}.dpad button{touch-action:none;min-width:38px}.legend{font-size:12px;color:#bdbdac;line-height:1.7}.result{margin:6px 0;padding:9px;border:1px solid #bcaa76;border-radius:5px}details{margin:7px 0;font-size:12px}summary{cursor:pointer;color:#d9c99d}#pad{font-size:11px;color:#bdbdac}@media(max-width:800px){.layout{grid-template-columns:1fr}.log{height:90px}.stats{grid-template-columns:repeat(3,1fr)}.stat b{font-size:18px}.controls{justify-content:flex-start}main{padding:7px}} 
+</style></head><body><main>
+<div class="top"><div><h1>THE JOLLY BEAN CAFÉ</h1><small>04 · 点击指令 × 安全窗口 · 无限营业测试 v0.1</small></div><div class="bar"><button class="primary" id="start">开始营业</button><button id="reset">重置</button><a href="../manual-auto/" style="color:#d5c28d">自由移动版</a></div></div>
+<details><summary>玩法说明</summary><p>直接点击机器、餐桌或交接台，自动接管对应机器人并走近执行；点击机器人本身仅切换主控。磨豆机启动后独立运行，后台主控或托管时满4份自动停止，普通自动时可能过量研磨。点击停止立即保留进度，重新点击工位继续。当前机器人有读条时，点击新目标会暂停原任务并改为新指令；未切换控制权的另一台仍按原规则自动工作。咖啡机启动后独立计时，5秒完成，6秒安全窗口，2.5秒警告，超时故障；及时取杯并送往中央交接台。点击临时托管给非主控机器人使用一次15秒托管。本版本不限营业时间，顾客持续入座，可随时重置。机器自身的安全窗口和临时托管倒计时仍然有效。</p></details>
+<div class="hud"><div class="stats"><div class="stat">已营业<b id="time">00:00</b></div><div class="stat">咖啡粉<b id="ground">0/4</b></div><div class="stat">累计出杯<b id="brewed">0</b></div><div class="stat">交接台<b id="ready">0/3</b></div><div class="stat">营业额<b id="money">0</b></div><div class="stat">失误 / 最高纪录<b id="mistakes">0 / 0</b></div></div></div>
+<div class="layout"><div class="stage"><div class="scene"><canvas id="game" width="900" height="470" tabindex="0" aria-label="咖啡馆白盒场景"></canvas></div><div class="hint" id="hint"></div>
+<div class="controls"><div class="actions"><button id="backControl">接管后台</button><button id="frontControl">接管前厅</button><button id="stop">立即停止 / 保留进度</button><button id="assist">临时托管 ×1</button></div><span class="muted">点击场景物件下达指令</span></div>
+<div id="result" class="result" hidden></div><p class="legend">点击机器、餐桌、交接台 → 自动切换到对应区域并走近操作。点击机器人 → 仅接管。点击停止 → 立即暂停当前任务与后台研磨，保留进度。支持触屏；无需键盘。<span id="pad"></span></p></div>
+<aside class="side"><strong>实时工作日志</strong><div id="log" class="log"></div></aside></div></main>
+<script>
+"use strict";
+const SPEED=180,WORK={grind:2,order:1.2,deliver:0,pay:.8,clean:1.2,start:.35,collect:.35,deposit:.35,pickup:.35,repair:1.5},BREW=5,SAFE=6,WARN=2.5,ASSIST=15;
+const label={idle:"待机",grind:"研磨",start:"启动咖啡机",collect:"取杯",deposit:"放杯",order:"点单",deliver:"送餐",pay:"收银",clean:"擦桌",repair:"维修"};
+const sites={grind:{x:95,y:156,side:"back",name:"磨豆机"},machine:{x:270,y:156,side:"back",name:"咖啡机"},backpass:{x:411,y:258,side:"back",name:"交接台"},frontpass:{x:489,y:258,side:"front",name:"取餐台"},table0:{x:590,y:188,side:"front",name:"1号桌"},table1:{x:787,y:188,side:"front",name:"2号桌"},table2:{x:690,y:376,side:"front",name:"3号桌"}};
+const obstacles=[{x:40,y:65,w:110,h:60},{x:208,y:65,w:125,h:60},{x:431,y:201,w:38,h:100},{x:545,y:105,w:90,h:56},{x:742,y:105,w:90,h:56},{x:645,y:293,w:90,h:56}];
+const inside=(r,x,y)=>{const lo=r.side==="back"?22:480,hi=r.side==="back"?420:878;return x>=lo&&x<=hi&&y>=52&&y<=438&&!obstacles.some(o=>x>o.x-11&&x<o.x+o.w+11&&y>o.y-11&&y<o.y+o.h+11)};
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),near=(r,k)=>dist(r,sites[k])<=32;
+function robot(side,x,y){return {side,x,y,last:"idle",lastTable:0,job:null,pausedJob:null,route:[],goal:null,carry:null,assist:0,wait:0}}
+function newGame(best=0){return {run:false,end:false,time:0,focus:"back",ground:0,brewed:0,ready:[],money:0,paid:0,mistakes:0,best,charges:1,nextGuest:4,tables:[1,2,3].map(guest=>({guest,state:"new"})),grinder:{active:false,progress:0},machine:{phase:"idle",age:0,cup:null},back:robot("back",180,280),front:robot("front",675,250),logs:["等待开店。先控制后台研磨，或者切换前厅点单。"]}}
+function say(s,msg,type=""){s.logs.unshift({msg,type});if(s.logs.length>30)s.logs.length=30}
+function fail(s,msg){s.mistakes++;say(s,msg,"bad")}
+function setTable(s,c,state){const t=s.tables[c?.table];if(t&&t.guest===c.guest){t.state=state;return true}return false}
+function cupValid(s,c,state){return c&&c.table>=0&&s.tables[c.table].guest===c.guest&&s.tables[c.table].state===state}
+function available(s,state){return s.tables.findIndex(t=>t.state===state)}
+function targetOf(s,i){return {table:i,guest:s.tables[i].guest}}
+function route(r,key){
+ const p=sites[key];if(!p||p.side!==r.side)return [];
+ if(near(r,key))return [];
+ // Small grid pathfinder. Paths avoid solid furniture; endpoints are interaction positions.
+ const step=18,ox=r.side==="back"?22:480,oy=52,cols=Math.floor(((r.side==="back"?420:878)-ox)/step)+1,rows=22;
+ const pts=[];for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const x=ox+i*step,y=oy+j*step;if(inside(r,x,y))pts.push({x,y,i,j})}
+ function clear(a,b){const n=Math.max(1,Math.ceil(dist(a,b)/6));for(let i=1;i<=n;i++)if(!inside(r,a.x+(b.x-a.x)*i/n,a.y+(b.y-a.y)*i/n))return false;return true}
+ if(clear(r,p))return [{x:p.x,y:p.y}];
+ const from=pts.filter(q=>clear(r,q)).sort((a,b)=>dist(r,a)-dist(r,b))[0],to=pts.filter(q=>clear(q,p)).sort((a,b)=>dist(a,p)-dist(b,p))[0];if(!from||!to)return [];
+ const map=new Map(pts.map(q=>[q.i+","+q.j,q])),q=[from],prev=new Map([[from,null]]);
+ for(let n=0;n<q.length;n++){const a=q[n];if(a===to)break;for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const b=map.get((a.i+di)+","+(a.j+dj));if(b&&!prev.has(b)&&clear(a,b)){prev.set(b,a);q.push(b)}}}
+ if(!prev.has(to))return [];const out=[];for(let a=to;a;a=prev.get(a))out.unshift(a);out.push(p);return out;
+}
+function navigate(r,key,action){r.goal={key,action};r.route=route(r,key);if(!r.route.length&&!near(r,key)){r.goal=null;r.wait=.4}}
+function move(r,dx,dy,dt){const n=Math.hypot(dx,dy);if(n>1){dx/=n;dy/=n}const x=r.x+dx*SPEED*dt,y=r.y+dy*SPEED*dt;if(inside(r,x,r.y))r.x=x;if(inside(r,r.x,y))r.y=y}
+function follow(r,dt){let left=SPEED*dt;while(r.route.length&&left>0){const p=r.route[0],d=dist(r,p);if(d<=left){r.x=p.x;r.y=p.y;r.route.shift();left-=d}else{r.x+=(p.x-r.x)*left/d;r.y+=(p.y-r.y)*left/d;left=0}}}
+function contextual(s,r,key){
+ if(r.side==="back"){if(key==="grind")return "grind";if(key==="backpass")return "deposit";if(key==="machine")return s.machine.phase==="fault"?"repair":s.machine.phase==="ready"||s.machine.phase==="warn"?"collect":"start"}
+ if(key==="frontpass")return "pickup";
+ const i=Number(key.slice(-1)),t=s.tables[i];if(!t)return null;if(r.carry)return "deliver";return t.state==="new"?"order":t.state==="served"?"pay":t.state==="paid"?"clean":null;
+}
+function startGrinding(s,r,auto){
+ const g=s.grinder,safe=r.side===s.focus||r.assist>0;
+ if(!auto)r.last="grind";
+ if(g.active)return true;
+ if(safe&&s.ground>=4){if(!auto)say(s,"咖啡粉已满，磨豆机保持停止。");return false}
+ g.active=true;say(s,g.progress>0?"Grindy Joe：继续研磨，保留原进度。":"Grindy Joe：启动研磨，可离开工位。");return true;
+}
+function grinderTick(s,dt){
+ const g=s.grinder,safe=s.focus==="back"||s.back.assist>0;
+ if(!g.active)return;
+ if(safe&&s.ground>=4){g.active=false;say(s,"咖啡粉 4/4，磨豆机自动停止。","good");return}
+ g.progress+=dt;
+ while(g.active&&g.progress+1e-8>=WORK.grind){
+  g.progress=Math.max(0,g.progress-WORK.grind);
+  if(s.ground<4){s.ground++;say(s,"研磨完成 +1");}
+  else fail(s,"咖啡粉已满，仍在研磨！");
+  if(safe&&s.ground>=4){g.active=false;g.progress=0;say(s,"咖啡粉 4/4，磨豆机自动停止。","good")}
+ }
+}
+function begin(s,r,key,action,auto=false){
+ if(r.job||!near(r,key))return false;
+ let a=action||contextual(s,r,key);if(!a){if(!auto)say(s,"现在没有可执行的操作。");r.wait=.4;return false}
+ if(a==="grind")return startGrinding(s,r,auto);
+ let i=key.startsWith("table")?Number(key.slice(-1)):-1,t=i>=0?targetOf(s,i):null;
+ if(!auto){r.last=a==="pickup"?"deliver":a==="deposit"?"collect":a;if(i>=0)r.lastTable=i}
+ const seconds=WORK[a]??.4,old=r.pausedJob;
+ if(old&&old.a===a&&old.key===key&&old.target?.guest===t?.guest){r.job={...old,auto};r.pausedJob=null;say(s,"继续"+(label[a]||a)+"，保留原进度。")}
+ else{r.pausedJob=null;r.job={a,key,target:t,left:seconds,total:seconds,auto}}
+ if(seconds===0)finish(s,r);
+ return true;
+}
+function finish(s,r){
+ const j=r.job;r.job=null;const a=j.a,m=s.machine,t=j.target,smart=r.side!==s.focus&&r.assist>0;
+ const bad=msg=>{if(smart)say(s,"托管：跳过无效操作。");else fail(s,msg)};
+ if(a==="start"){
+   if(m.phase!=="idle"){if(!j.auto)say(s,"咖啡机正在工作，请在安全窗口取杯。");}
+   else if(s.ground<=0)bad("没有咖啡粉！");
+   else if(r.carry)bad("手中还有咖啡，先放到交接台。");
+   else{const i=available(s,"waiting");if(smart&&i<0)return;s.ground--;m.phase="brewing";m.age=0;m.cup=i<0?{table:-1,guest:0}:targetOf(s,i);if(i>=0)setTable(s,m.cup,"brewing");else bad("没有订单，仍然启动咖啡机。");say(s,"Miss Steam：开始萃取。")}
+ }else if(a==="collect"){
+   if(r.carry){bad("手中已有一杯咖啡。")}
+   else if(m.phase==="ready"||m.phase==="warn"){r.carry=m.cup;m.phase="idle";m.age=0;m.cup=null;if(r.carry.table>=0)setTable(s,r.carry,"backcarry");say(s,"咖啡取出，请放到中央交接台。","good")}
+   else if(m.phase==="fault")say(s,"咖啡机故障，需要维修。");else if(!j.auto)say(s,"还没有可取出的咖啡。");
+ }else if(a==="repair"){if(m.phase==="fault"){m.phase="idle";m.age=0;m.cup=null;say(s,"咖啡机已维修。","good")}}
+ else if(a==="deposit"){
+   if(!r.carry){if(!j.auto)say(s,"没有可以放入的咖啡。")}
+   else if(r.carry.table<0){r.carry=null;say(s,"无订单的咖啡已丢弃。")}
+   else if(s.ready.length>=3){bad("交接台已满！")}
+   else{s.ready.push(r.carry);setTable(s,r.carry,"ready");r.carry=null;say(s,"咖啡已放到交接台。","good")}
+ }else if(a==="pickup"){
+   if(r.carry)bad("已经拿着一杯咖啡。");
+   else if(!s.ready.length){if(j.auto&&!smart)bad("交接台是空的，仍在取餐！");else say(s,"交接台暂无咖啡。")}
+   else{r.carry=s.ready.shift();setTable(s,r.carry,"frontcarry");say(s,"已取餐："+(r.carry.table+1)+"号桌。")}
+ }else if(a==="order"){if(cupValid(s,t,"new")){setTable(s,t,"waiting");say(s,(t.table+1)+"号桌已点单。")}else bad("重复点单！")}
+ else if(a==="deliver"){if(r.carry&&t&&r.carry.table===t.table&&r.carry.guest===t.guest&&cupValid(s,r.carry,"frontcarry")){setTable(s,r.carry,"served");r.carry=null;say(s,(t.table+1)+"号桌送餐成功。","good")}else bad("送错桌或没有咖啡！")}
+ else if(a==="pay"){if(cupValid(s,t,"served")){setTable(s,t,"paid");s.money+=10;s.paid++;say(s,(t.table+1)+"号桌结账 +10。","good")}else bad("重复收银！")}
+ else if(a==="clean"){if(cupValid(s,t,"paid")){s.tables[t.table]={guest:s.nextGuest++,state:"new"};say(s,(t.table+1)+"号桌清洁完成，新客入座。","good")}else bad("又在擦干净的桌子！")}
+ r.wait=.16;
+}
+function machineTick(s,dt){
+ const m=s.machine;if(!["brewing","ready","warn"].includes(m.phase))return;
+ m.age+=dt;
+ if(m.age>=BREW+SAFE+WARN){if(cupValid(s,m.cup,"brewing")||cupValid(s,m.cup,"done"))setTable(s,m.cup,"waiting");m.phase="fault";m.cup=null;fail(s,"Miss Steam 过热故障！订单退回，需维修。");return}
+ if(m.phase==="brewing"&&m.age>=BREW){m.phase="ready";s.brewed++;if(m.cup.table>=0)setTable(s,m.cup,"done");say(s,"咖啡完成！进入安全窗口。","good")}
+ if(m.phase==="ready"&&m.age>=BREW+SAFE){m.phase="warn";say(s,"警告：Miss Steam 压力过高！","bad")}
+}
+function autoPlan(s,r){
+ const smart=r.assist>0,m=s.machine,a=r.last;let key=null,act=a;
+ if(r.side==="back"){
+  if(smart&&m.phase==="fault"){key="machine";act="repair"}
+  else if(r.carry){if(smart&&s.ready.length>=3)return;key="backpass";act="deposit"}
+  else if(smart&&(m.phase==="ready"||m.phase==="warn")){key="machine";act="collect"}
+  else if(a==="grind"){if(s.grinder.active||smart&&s.ground>=4)return;key="grind"}
+  else if(a==="start"){if(smart&&(m.phase!=="idle"||s.ground===0||available(s,"waiting")<0))return;if(m.phase!=="idle")return;key="machine"}
+  else if(a==="collect"){if(smart&&m.phase!=="ready"&&m.phase!=="warn")return;if(m.phase==="brewing")return;key="machine"}
+  else if(a==="repair"){if(m.phase!=="fault")return;key="machine"}
+ }else{
+  if(a==="deliver"||r.carry){if(r.carry){key="table"+r.carry.table;act="deliver"}else{if(smart&&!s.ready.length)return;key="frontpass";act="pickup"}}
+  else if(["order","pay","clean"].includes(a)){let i=available(s,a==="order"?"new":a==="pay"?"served":"paid");if(i<0){if(smart)return;i=r.lastTable}key="table"+i;r.lastTable=i}
+ }
+ if(key)navigate(r,key,act);
+}
+function tickRobot(s,r,dt,input){
+ r.assist=Math.max(0,r.assist-dt);
+ if(r.job){r.job.left-=dt;if(r.job.left<=1e-8)finish(s,r);return}
+ r.wait=Math.max(0,r.wait-dt);const manual=r.side===s.focus;
+ if(manual&&Math.hypot(input.x,input.y)>.05){r.route=[];r.goal=null;move(r,input.x,input.y,dt);return}
+ if(r.goal){follow(r,dt);if(!r.route.length){const g=r.goal;r.goal=null;begin(s,r,g.key,g.action,!manual)}return}
+ if(!manual&&r.wait<=0&&(r.last!=="idle"||r.assist>0))autoPlan(s,r);
+}
+function tick(s,dt,input={x:0,y:0}){
+ if(!s.run)return;s.time+=dt;grinderTick(s,dt);machineTick(s,dt);tickRobot(s,s.back,dt,input);tickRobot(s,s.front,dt,input);s.best=Math.max(s.best,s.money);
+}
+function switchRobot(s){if(!s.run)return;const old=s[s.focus];old.route=[];old.goal=null;s.focus=s.focus==="back"?"front":"back";const r=s[s.focus];r.route=[];r.goal=null;say(s,"接管"+(s.focus==="back"?"后台":"前厅")+"。")}
+function stopRepeat(s){if(!s.run)return;const r=s[s.focus];r.last="idle";r.goal=null;r.route=[];if(r.job){r.pausedJob=r.job;r.job=null;}if(r.side==="back")s.grinder.active=false;say(s,"立即停止，保留任务与研磨进度；再次交互可继续。")}
+function assist(s){if(!s.run||s.charges<=0)return;const r=s[s.focus==="back"?"front":"back"];s.charges--;r.assist=ASSIST;say(s,"智能真空管：另一侧托管15秒。","good")}
+function nearest(r){return Object.keys(sites).filter(k=>sites[k].side===r.side&&near(r,k)).sort((a,b)=>dist(r,sites[a])-dist(r,sites[b]))[0]}
+function interact(s){if(!s.run)return;const r=s[s.focus],k=nearest(r);if(k&&!r.job){r.route=[];r.goal=null;begin(s,r,k,null,false)}else if(!r.job)say(s,"请靠近机器、交接台或餐桌。")}
+const $=id=>document.getElementById(id),cv=$("game"),ctx=cv.getContext("2d");let best=0;try{best=Number(localStorage.getItem("jolly-click-control-best"))||0}catch{}let s=newGame(best);
+let lastFrame=0,acc=0,logRef=null;
+function start(){if(s.run){s.run=false;say(s,"营业暂停。");return}const resume=s.time>0;s.run=true;acc=0;say(s,resume?"继续营业！":"开始营业！")}
+function reset(){s=newGame(s.best);acc=0;draw()}
+function selectSide(s,side){if(!s.run)return false;if(s.focus!==side)switchRobot(s);return true}
+function clickTarget(s,key){if(!s.run||!sites[key])return false;selectSide(s,sites[key].side);const r=s[s.focus];if(r.job){if(r.job.key===key)return true;r.pausedJob=r.job;r.job=null;}navigate(r,key,null);return true}
+function hitSite(p,focus){
+ if(p.x>=431&&p.x<=469&&p.y>=201&&p.y<=301)return focus==="back"?"backpass":"frontpass";
+ const hits=[["grind",40,65,110,74],["machine",208,65,125,74],["table0",545,75,90,95],["table1",742,75,90,95],["table2",645,263,90,95]];
+ for(const [key,x,y,w,h] of hits)if(p.x>=x&&p.x<=x+w&&p.y>=y&&p.y<=y+h)return key;
+ return Object.keys(sites).filter(k=>dist(p,sites[k])<=26).sort((a,b)=>dist(p,sites[a])-dist(p,sites[b]))[0]||null;
+}
+$("start").onclick=start;$("reset").onclick=reset;$("backControl").onclick=()=>selectSide(s,"back");$("frontControl").onclick=()=>selectSide(s,"front");$("stop").onclick=()=>stopRepeat(s);$("assist").onclick=()=>assist(s);
+cv.addEventListener("pointerdown",e=>{if(!s.run)return;const rect=cv.getBoundingClientRect(),p={x:(e.clientX-rect.left)*900/rect.width,y:(e.clientY-rect.top)*470/rect.height};const robot=[s.back,s.front].find(r=>dist(p,{x:r.x,y:r.y-8})<=19);if(robot){selectSide(s,robot.side);return}const k=hitSite(p,s.focus);if(k)clickTarget(s,k)});
+function inputs(){return {x:0,y:0}}
+function rect(x,y,w,h,c,stroke){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);if(stroke){ctx.strokeStyle=stroke;ctx.strokeRect(x,y,w,h)}}
+function txt(t,x,y,c="#eee7d3",size=13,align="center"){ctx.fillStyle=c;ctx.font=size+"px system-ui,sans-serif";ctx.textAlign=align;ctx.fillText(t,x,y)}
+function circle(x,y,r,c){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=c;ctx.fill()}
+function bar(x,y,w,h,p,c){rect(x,y,w,h,"#232820");rect(x,y,w*Math.max(0,Math.min(1,p)),h,c)}
+const phases={idle:"待机 · 启动",brewing:"萃取中",ready:"完成 · 及时取杯",warn:"高压警告！",fault:"故障 · 点击维修"};
+const tableLabels={new:"待点单",waiting:"待制作",brewing:"萃取中",done:"待取出",backcarry:"运往交接台",ready:"待取餐",frontcarry:"送餐中",served:"待收银",paid:"待擦桌"};
+function draw(){
+ rect(0,0,900,470,"#22271f");rect(10,35,425,415,"#65725e");rect(465,35,425,415,"#96876d");
+ ctx.strokeStyle="#ffffff13";ctx.lineWidth=1;for(let x=10;x<890;x+=25){ctx.beginPath();ctx.moveTo(x,35);ctx.lineTo(x,450);ctx.stroke()}for(let y=35;y<450;y+=25){ctx.beginPath();ctx.moveTo(10,y);ctx.lineTo(890,y);ctx.stroke()}
+ rect(435,35,30,166,"#454a3c");rect(435,301,30,149,"#454a3c");
+ txt("后台 "+(s.focus==="back"?"· 主控":"· 自动"),220,23,s.focus==="back"?"#f4d88e":"#c5c6b4",15);txt("前厅 "+(s.focus==="front"?"· 主控":"· 自动"),680,23,s.focus==="front"?"#f4d88e":"#c5c6b4",15);
+ const g=s.grinder,gc=g.active?(s.ground>=4?"#c66b53":"#91b37e"):g.progress>0?"#d4ae6c":"#c3ad7f";rect(40,65,110,60,gc,"#514c37");txt("Grindy Joe",95,88,"#342f23",12);txt(g.active?(s.ground>=4?"过量研磨！":"研磨 "+(WORK.grind-g.progress).toFixed(1)+"s"):g.progress>0?"暂停 · 点击继续":s.ground>=4?"库存已满":"点击启动磨豆机",95,109,"#342f23",12);bar(40,130,110,7,g.progress/WORK.grind,gc);
+ const m=s.machine,mc={idle:"#b9a178",brewing:"#849eb0",ready:"#91b37e",warn:"#dfa84f",fault:"#c66b53"}[m.phase];
+ rect(208,65,125,60,mc,"#514c37");txt("MISS STEAM",270,86,"#342f23",12);const countdown=m.phase==="brewing"?Math.max(0,BREW-m.age):m.phase==="ready"?Math.max(0,BREW+SAFE-m.age):m.phase==="warn"?Math.max(0,BREW+SAFE+WARN-m.age):null;txt(countdown===null?phases[m.phase]:(m.phase==="brewing"?"萃取 ":m.phase==="ready"?"取杯剩余 ":"高压警告 ")+countdown.toFixed(1)+"s",270,106,"#342f23",13);
+ bar(208,130,125,7,m.phase==="brewing"?m.age/BREW:m.phase==="ready"?(BREW+SAFE-m.age)/SAFE:m.phase==="warn"?(BREW+SAFE+WARN-m.age)/WARN:m.phase==="fault"?1:0,mc);
+ if(m.phase==="ready"||m.phase==="warn"){rect(259,44,20,17,"#f1e3c1");rect(263,45,12,4,"#7c5039")}
+ if(m.phase==="fault"){txt("! ! !",270,54,"#ffd39d",20)}
+ rect(431,201,38,100,"#c2a675","#544831");txt("交接",450,217,"#382f23",11);s.ready.forEach((c,i)=>{rect(442,231+i*20,15,12,"#f4e4bf");rect(445,232+i*20,9,4,"#704b34")});
+ [[590,133],[787,133],[690,321]].forEach(([x,y],i)=>{ctx.beginPath();ctx.ellipse(x,y,45,28,0,0,Math.PI*2);ctx.fillStyle="#d0bb93";ctx.fill();ctx.strokeStyle="#65543c";ctx.stroke();circle(x,y-35,12,"#f1d1a3");rect(x-9,y-57,18,9,"#524936");txt((i+1)+"号桌",x,y+4,"#493c2c",13);txt(tableLabels[s.tables[i].state],x,y+45,"#fff1cc",12)});
+ for(const k of Object.keys(sites)){const p=sites[k];ctx.strokeStyle="#e6dfbc55";ctx.beginPath();ctx.arc(p.x,p.y,17,0,Math.PI*2);ctx.stroke()}
+ for(const r of [s.back,s.front]){
+  const active=s.focus===r.side;circle(r.x,r.y+8,16,active?"#f8d17b":"#444d3c");rect(r.x-10,r.y-12,20,26,r.side==="back"?"#8eafa1":"#cf9274","#e7d6ae");rect(r.x-15,r.y-24,30,20,r.assist>0?"#dcb45f":"#bcac82","#e8d9b8");rect(r.x-10,r.y-20,20,10,"#363c33");circle(r.x-5,r.y-15,2,"#efdab0");circle(r.x+5,r.y-15,2,"#efdab0");
+  if(r.carry){rect(r.x+13,r.y-4,10,10,"#f6e6be");rect(r.x+15,r.y-4,6,3,"#80503b")}
+  if(r.assist>0){rect(r.x-4,r.y-34,8,9,"#ffda78");txt("托管 "+r.assist.toFixed(0)+"s",r.x,r.y-40,"#ffdc8a",12)}else txt(active?"▼ 主控":"↻ "+(label[r.last]||r.last),r.x,r.y-31,active?"#fff3ba":"#f3e7c9",12);
+  if(r.job){bar(r.x-24,r.y+21,48,5,1-r.job.left/r.job.total,"#e9cd89")}else if(r.pausedJob){const p=sites[r.pausedJob.key];bar(p.x-24,p.y+10,48,5,1-r.pausedJob.left/r.pausedJob.total,"#d4ae6c");}
+ }
+ const r=s[s.focus],k=nearest(r);if(k){const p=sites[k];ctx.strokeStyle="#ffe29d";ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,22,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1}
+ $("hint").textContent=(s.focus==="back"?"后台":"前厅")+"主控 · "+(r.job?"正在"+(label[r.job.a]||r.job.a)+" "+Math.max(0,r.job.left).toFixed(1)+"s":r.goal?"前往 "+sites[r.goal.key].name:g.active&&s.focus==="back"?"磨豆机运行中，可点击其他工位":"点击任意工位或餐桌下达指令")+" | 自动侧："+(label[s[s.focus==="back"?"front":"back"].last]||"待机");
+ $("backControl").classList.toggle("primary",s.focus==="back");$("frontControl").classList.toggle("primary",s.focus==="front");
+ if(r.goal){const p=sites[r.goal.key];ctx.strokeStyle="#ffe29d";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(r.x,r.y);for(const q of r.route)ctx.lineTo(q.x,q.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.arc(p.x,p.y,25,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1;}
+ const seconds=Math.floor(s.time+1e-6);$("time").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");$("ground").textContent=s.ground+"/4";$("brewed").textContent=s.brewed;$("ready").textContent=s.ready.length+"/3";$("money").textContent=s.money;$("mistakes").textContent=s.mistakes+" / "+s.best;
+ $("start").disabled=false;$("start").textContent=s.run?"暂停营业":s.time>0?"继续营业":"开始营业";$("assist").disabled=!s.run||!s.charges;$("assist").textContent="临时托管 ×"+s.charges;
+ if(logRef!==s.logs[0]){logRef=s.logs[0];$("log").replaceChildren(...s.logs.map(v=>{const d=document.createElement("div");d.textContent=typeof v==="string"?v:v.msg;d.className=v.type||"";return d}))}
+ $("result").hidden=!s.end;if(s.best>best){best=s.best;try{localStorage.setItem("jolly-click-control-best",String(best))}catch{}}
+}
+function frame(now){const elapsed=lastFrame?Math.min(.2,(now-lastFrame)/1000):0;lastFrame=now;const input=inputs();if(s.run){acc+=elapsed;while(acc>=.025){tick(s,.025,input);acc-=.025}}draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
+</script></body></html>
