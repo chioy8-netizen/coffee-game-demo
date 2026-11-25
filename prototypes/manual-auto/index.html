@@ -3,23 +3,23 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#20231e;color:#eee8d8;font:14px system-ui,sans-serif}main{max-width:1230px;margin:auto;padding:14px}h1{font-size:21px;margin:0}small,.muted{color:#bdbdac}button{font:inherit;color:inherit;background:#41483d;border:1px solid #737969;border-radius:6px;padding:8px 12px;cursor:pointer}button:hover{background:#58614f}button:disabled{opacity:.45;cursor:default}.primary{background:#d3b879;color:#24251c;font-weight:bold}.top,.bar,.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.top{justify-content:space-between}.hud{position:sticky;top:0;z-index:5;background:#20231e;padding:8px 0}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}.stat{border:1px solid #53594b;border-radius:6px;background:#31362d;padding:6px 9px;font-size:11px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:#f0d9a4}.layout{display:grid;grid-template-columns:minmax(0,1fr) 205px;gap:9px}.stage{min-width:0}.scene{position:relative;background:#34392f;border:1px solid #69715e;border-radius:7px;overflow:hidden}canvas{display:block;width:100%;height:auto;touch-action:none;outline:none}.hint{background:#353a30;border:1px solid #51594a;padding:8px;border-radius:5px;min-height:38px;margin:7px 0}.side{background:#181c17;border:1px solid #494f43;border-radius:7px;padding:9px;min-width:0}.log{height:335px;overflow:auto;overflow-wrap:anywhere;font-size:12px;line-height:1.6}.log div{padding:5px 0;border-bottom:1px solid #333a2e}.bad{color:#e7a08b}.good{color:#b4d5a3}.controls{justify-content:space-between}.actions,.dpad{display:flex;gap:5px;flex-wrap:wrap;align-items:center}.dpad button{touch-action:none;min-width:38px}.legend{font-size:12px;color:#bdbdac;line-height:1.7}.result{margin:6px 0;padding:9px;border:1px solid #bcaa76;border-radius:5px}details{margin:7px 0;font-size:12px}summary{cursor:pointer;color:#d9c99d}#pad{font-size:11px;color:#bdbdac}@media(max-width:800px){.layout{grid-template-columns:1fr}.log{height:90px}.stats{grid-template-columns:repeat(3,1fr)}.stat b{font-size:18px}.controls{justify-content:flex-start}main{padding:7px}} 
 </style></head><body><main>
-<div class="top"><div><h1>THE JOLLY BEAN CAFÉ</h1><small>03 · 自由移动 × 安全窗口 · 独立白盒 v0.1</small></div><div class="bar"><button class="primary" id="start">开始营业</button><button id="reset">重置</button><a href="../dual-switch/" style="color:#d5c28d">旧版分屏</a></div></div>
-<details><summary>玩法说明</summary><p>控制一台机器人自由移动，靠近工位或餐桌按 A 进行一次操作。空格 / LB 切换，另一台重复最后的工作。咖啡机启动后独立计时，5秒完成，6秒安全窗口，2.5秒警告，超时故障；及时取杯并送往中央交接台。F / Y 给非主控机器人使用一次15秒临时托管。60秒内尽可能多结账。</p></details>
-<div class="hud"><div class="stats"><div class="stat">剩余时间<b id="time">60</b></div><div class="stat">咖啡粉<b id="ground">0/4</b></div><div class="stat">累计出杯<b id="brewed">0</b></div><div class="stat">交接台<b id="ready">0/3</b></div><div class="stat">营业额<b id="money">0</b></div><div class="stat">失误 / 最高纪录<b id="mistakes">0 / 0</b></div></div></div>
+<div class="top"><div><h1>THE JOLLY BEAN CAFÉ</h1><small>03 · 自由移动 × 安全窗口 · 无限营业测试 v0.2</small></div><div class="bar"><button class="primary" id="start">开始营业</button><button id="reset">重置</button><a href="../dual-switch/" style="color:#d5c28d">旧版分屏</a></div></div>
+<details><summary>玩法说明</summary><p>控制一台机器人自由移动，靠近工位或餐桌按 A 进行一次操作。空格 / LB 切换，另一台重复最后的工作。咖啡机启动后独立计时，5秒完成，6秒安全窗口，2.5秒警告，超时故障；及时取杯并送往中央交接台。F / Y 给非主控机器人使用一次15秒临时托管。本版本不限营业时间，顾客持续入座，可随时重置。机器自身的安全窗口和临时托管倒计时仍然有效。</p></details>
+<div class="hud"><div class="stats"><div class="stat">已营业<b id="time">00:00</b></div><div class="stat">咖啡粉<b id="ground">0/4</b></div><div class="stat">累计出杯<b id="brewed">0</b></div><div class="stat">交接台<b id="ready">0/3</b></div><div class="stat">营业额<b id="money">0</b></div><div class="stat">失误 / 最高纪录<b id="mistakes">0 / 0</b></div></div></div>
 <div class="layout"><div class="stage"><div class="scene"><canvas id="game" width="900" height="470" tabindex="0" aria-label="咖啡馆白盒场景"></canvas></div><div class="hint" id="hint"></div>
 <div class="controls"><div class="dpad"><button data-move="up">↑</button><button data-move="left">←</button><button data-move="down">↓</button><button data-move="right">→</button></div><div class="actions"><button id="interact">A 交互</button><button id="switch">空格 切换</button><button id="stop">S 停止重复</button><button id="assist">F 临时托管</button></div></div>
-<div id="result" class="result" hidden></div><p class="legend">方向键移动 · A 交互 · 空格切换 · S 清除重复指令 · F 托管另一侧。鼠标可点工作站自动走近并交互。手柄：左摇杆 / 十字键、A 交互、LB 切换、B 停止、Y 托管、Start 开始。<span id="pad"></span></p></div>
+<div id="result" class="result" hidden></div><p class="legend">方向键移动 · A 交互 · 空格切换 · S 清除重复指令 · F 托管另一侧。鼠标可点工作站自动走近并交互。Enter 开始 / 暂停。手柄：左摇杆 / 十字键、A 交互、LB 切换、B 停止、Y 托管、Start 开始 / 暂停。<span id="pad"></span></p></div>
 <aside class="side"><strong>实时工作日志</strong><div id="log" class="log"></div></aside></div></main>
 <script>
 "use strict";
-const ROUND=60,SPEED=180,WORK={grind:2,order:1.2,deliver:1.5,pay:.8,clean:1.2,start:.35,collect:.35,deposit:.35,pickup:.35,repair:1.5},BREW=5,SAFE=6,WARN=2.5,ASSIST=15;
+const SPEED=180,WORK={grind:2,order:1.2,deliver:1.5,pay:.8,clean:1.2,start:.35,collect:.35,deposit:.35,pickup:.35,repair:1.5},BREW=5,SAFE=6,WARN=2.5,ASSIST=15;
 const label={idle:"待机",grind:"研磨",start:"启动咖啡机",collect:"取杯",deposit:"放杯",order:"点单",deliver:"送餐",pay:"收银",clean:"擦桌",repair:"维修"};
 const sites={grind:{x:95,y:156,side:"back",name:"磨豆机"},machine:{x:270,y:156,side:"back",name:"咖啡机"},backpass:{x:411,y:258,side:"back",name:"交接台"},frontpass:{x:489,y:258,side:"front",name:"取餐台"},table0:{x:590,y:188,side:"front",name:"1号桌"},table1:{x:787,y:188,side:"front",name:"2号桌"},table2:{x:690,y:376,side:"front",name:"3号桌"}};
 const obstacles=[{x:40,y:65,w:110,h:60},{x:208,y:65,w:125,h:60},{x:431,y:201,w:38,h:100},{x:545,y:105,w:90,h:56},{x:742,y:105,w:90,h:56},{x:645,y:293,w:90,h:56}];
 const inside=(r,x,y)=>{const lo=r.side==="back"?22:480,hi=r.side==="back"?420:878;return x>=lo&&x<=hi&&y>=52&&y<=438&&!obstacles.some(o=>x>o.x-11&&x<o.x+o.w+11&&y>o.y-11&&y<o.y+o.h+11)};
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),near=(r,k)=>dist(r,sites[k])<=32;
 function robot(side,x,y){return {side,x,y,last:"idle",lastTable:0,job:null,route:[],goal:null,carry:null,assist:0,wait:0}}
-function newGame(best=0){return {run:false,end:false,time:ROUND,focus:"back",ground:0,brewed:0,ready:[],money:0,paid:0,mistakes:0,best,charges:1,nextGuest:4,tables:[1,2,3].map(guest=>({guest,state:"new"})),machine:{phase:"idle",age:0,cup:null},back:robot("back",180,280),front:robot("front",675,250),logs:["等待开店。先控制后台研磨，或者切换前厅点单。"]}}
+function newGame(best=0){return {run:false,end:false,time:0,focus:"back",ground:0,brewed:0,ready:[],money:0,paid:0,mistakes:0,best,charges:1,nextGuest:4,tables:[1,2,3].map(guest=>({guest,state:"new"})),machine:{phase:"idle",age:0,cup:null},back:robot("back",180,280),front:robot("front",675,250),logs:["等待开店。先控制后台研磨，或者切换前厅点单。"]}}
 function say(s,msg,type=""){s.logs.unshift({msg,type});if(s.logs.length>30)s.logs.length=30}
 function fail(s,msg){s.mistakes++;say(s,msg,"bad")}
 function setTable(s,c,state){const t=s.tables[c?.table];if(t&&t.guest===c.guest){t.state=state;return true}return false}
@@ -116,7 +116,7 @@ function tickRobot(s,r,dt,input){
  if(!manual&&r.wait<=0)autoPlan(s,r);
 }
 function tick(s,dt,input={x:0,y:0}){
- if(!s.run)return;s.time=Math.max(0,s.time-dt);machineTick(s,dt);tickRobot(s,s.back,dt,input);tickRobot(s,s.front,dt,input);if(s.time<=1e-7){s.time=0;s.run=false;s.end=true;s.best=Math.max(s.best,s.money);say(s,"营业结束。","good")}
+ if(!s.run)return;s.time+=dt;machineTick(s,dt);tickRobot(s,s.back,dt,input);tickRobot(s,s.front,dt,input);s.best=Math.max(s.best,s.money);
 }
 function switchRobot(s){if(!s.run)return;const old=s[s.focus];old.route=[];old.goal=null;s.focus=s.focus==="back"?"front":"back";const r=s[s.focus];r.route=[];r.goal=null;say(s,"接管"+(s.focus==="back"?"后台":"前厅")+"。")}
 function stopRepeat(s){const r=s[s.focus];r.last="idle";r.goal=null;r.route=[];say(s,"已清除当前机器人的重复指令。正在执行的单次动作仍会完成。")}
@@ -125,7 +125,7 @@ function nearest(r){return Object.keys(sites).filter(k=>sites[k].side===r.side&&
 function interact(s){if(!s.run)return;const r=s[s.focus],k=nearest(r);if(k&&!r.job){r.route=[];r.goal=null;begin(s,r,k,null,false)}else if(!r.job)say(s,"请靠近机器、交接台或餐桌。")}
 const $=id=>document.getElementById(id),cv=$("game"),ctx=cv.getContext("2d");let best=0;try{best=Number(localStorage.getItem("jolly-free-control-best"))||0}catch{}let s=newGame(best);
 const keys=new Set(),touch=new Set();let previous=[],lastFrame=0,acc=0,logRef=null;
-function start(){if(s.run)return;if(s.end)s=newGame(s.best);s.run=true;acc=0;say(s,"开始营业！");cv.focus()}
+function start(){if(s.run){s.run=false;keys.clear();touch.clear();say(s,"营业暂停。");return}const resume=s.time>0;s.run=true;acc=0;say(s,resume?"继续营业！":"开始营业！");cv.focus()}
 function reset(){s=newGame(s.best);acc=0;keys.clear();touch.clear();draw()}
 function keyAction(k){if(k===" ")switchRobot(s);else if(k==="a")interact(s);else if(k==="s")stopRepeat(s);else if(k==="f")assist(s);else if(k==="enter")start()}
 document.addEventListener("keydown",e=>{const k=e.key.toLowerCase();if(["arrowup","arrowdown","arrowleft","arrowright"," ","a","s","f","enter"].includes(k)){e.preventDefault();keys.add(k);if(!e.repeat)keyAction(k)}});document.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));window.addEventListener("blur",()=>{keys.clear();touch.clear()});
@@ -166,10 +166,10 @@ function draw(){
  }
  const r=s[s.focus],k=nearest(r);if(k){const p=sites[k];ctx.strokeStyle="#ffe29d";ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,22,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1}
  $("hint").textContent=(s.focus==="back"?"后台":"前厅")+"主控 · "+(r.job?"正在"+(label[r.job.a]||r.job.a)+" "+Math.max(0,r.job.left).toFixed(1)+"s":k?"A "+(label[contextual(s,r,k)]|| (contextual(s,r,k)==="pickup"?"取餐":"等待"))+"（"+sites[k].name+"）":"移动到交互点")+" | 自动侧："+(label[s[s.focus==="back"?"front":"back"].last]||"待机");
- $("time").textContent=Math.ceil(s.time);$("ground").textContent=s.ground+"/4";$("brewed").textContent=s.brewed;$("ready").textContent=s.ready.length+"/3";$("money").textContent=s.money;$("mistakes").textContent=s.mistakes+" / "+s.best;
- $("start").disabled=s.run;$("start").textContent=s.end?"再挑战":s.run?"营业中":"开始营业";$("assist").disabled=!s.run||!s.charges;$("assist").textContent="F 托管 ×"+s.charges;
+ const seconds=Math.floor(s.time+1e-6);$("time").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");$("ground").textContent=s.ground+"/4";$("brewed").textContent=s.brewed;$("ready").textContent=s.ready.length+"/3";$("money").textContent=s.money;$("mistakes").textContent=s.mistakes+" / "+s.best;
+ $("start").disabled=false;$("start").textContent=s.run?"暂停营业":s.time>0?"继续营业":"开始营业";$("assist").disabled=!s.run||!s.charges;$("assist").textContent="F 托管 ×"+s.charges;
  if(logRef!==s.logs[0]){logRef=s.logs[0];$("log").replaceChildren(...s.logs.map(v=>{const d=document.createElement("div");d.textContent=typeof v==="string"?v:v.msg;d.className=v.type||"";return d}))}
- $("result").hidden=!s.end;if(s.end){$("result").textContent="营业结束 · 营业额 "+s.money+" · 结账 "+s.paid+" 位 · 出杯 "+s.brewed+" · 失误 "+s.mistakes+" · 最高 "+s.best;try{localStorage.setItem("jolly-free-control-best",String(s.best))}catch{}}
+ $("result").hidden=!s.end;if(s.best>best){best=s.best;try{localStorage.setItem("jolly-free-control-best",String(best))}catch{}}
 }
 function frame(now){const elapsed=lastFrame?Math.min(.2,(now-lastFrame)/1000):0;lastFrame=now;const input=inputs();if(s.run){acc+=elapsed;while(acc>=.025){tick(s,.025,input);acc-=.025}}draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
 </script></body></html>
