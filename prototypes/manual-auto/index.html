@@ -12,7 +12,7 @@
 <aside class="side"><strong>实时工作日志</strong><div id="log" class="log"></div></aside></div></main>
 <script>
 "use strict";
-const SPEED=180,WORK={grind:2,order:1.2,deliver:1.5,pay:.8,clean:1.2,start:.35,collect:.35,deposit:.35,pickup:.35,repair:1.5},BREW=5,SAFE=6,WARN=2.5,ASSIST=15;
+const SPEED=180,WORK={grind:2,order:1.2,deliver:0,pay:.8,clean:1.2,start:.35,collect:.35,deposit:.35,pickup:.35,repair:1.5},BREW=5,SAFE=6,WARN=2.5,ASSIST=15;
 const label={idle:"待机",grind:"研磨",start:"启动咖啡机",collect:"取杯",deposit:"放杯",order:"点单",deliver:"送餐",pay:"收银",clean:"擦桌",repair:"维修"};
 const sites={grind:{x:95,y:156,side:"back",name:"磨豆机"},machine:{x:270,y:156,side:"back",name:"咖啡机"},backpass:{x:411,y:258,side:"back",name:"交接台"},frontpass:{x:489,y:258,side:"front",name:"取餐台"},table0:{x:590,y:188,side:"front",name:"1号桌"},table1:{x:787,y:188,side:"front",name:"2号桌"},table2:{x:690,y:376,side:"front",name:"3号桌"}};
 const obstacles=[{x:40,y:65,w:110,h:60},{x:208,y:65,w:125,h:60},{x:431,y:201,w:38,h:100},{x:545,y:105,w:90,h:56},{x:742,y:105,w:90,h:56},{x:645,y:293,w:90,h:56}];
@@ -52,7 +52,9 @@ function begin(s,r,key,action,auto=false){
  let a=action||contextual(s,r,key);if(!a){if(!auto)say(s,"现在没有可执行的操作。");r.wait=.4;return false}
  let i=key.startsWith("table")?Number(key.slice(-1)):-1,t=i>=0?targetOf(s,i):null;
  if(!auto){r.last=a==="pickup"?"deliver":a==="deposit"?"collect":a;if(i>=0)r.lastTable=i;if(a==="grind"){if(s.ground>=4){r.grindBatch=false;say(s,"咖啡粉已满，研磨已停止。");return false}r.grindBatch=true}}
- r.job={a,key,target:t,left:WORK[a]||.4,total:WORK[a]||.4,auto};
+ const seconds=WORK[a]??.4;
+ r.job={a,key,target:t,left:seconds,total:seconds,auto};
+ if(seconds===0)finish(s,r);
  return true;
 }
 function finish(s,r){
